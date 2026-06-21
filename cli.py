@@ -1,32 +1,21 @@
-def exitShell():
-    print("Leaving Jenshell. See you later!")
+"""
+cli.py — Entry point utama untuk JenShell.
 
-def main():
-    while True:
-        try:
-            user_input = input("JenShell> ")
+Jalankan shell dengan: python cli.py
+"""
 
-            if user_input.strip() == "exit":
-                exitShell()
-                break
+import os
+import sys
 
-            if user_input.strip() == "":
-                continue
+# Setup encoding UTF-8 untuk Windows agar Unicode characters bisa tampil
+if os.name == "nt":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
-            args = user_input.split()
-            command = args[0]
-            arguments = args[1:]
-            
-            print(f"Command   : {command}")
-            print(f"Arguments : {arguments}")
-
-        except KeyboardInterrupt:
-            print()
-            continue
-        except EOFError:
-            print()
-            exitShell()
-            break
+from core.repl import run
 
 if __name__ == "__main__":
-    main()
+    run()
