@@ -115,11 +115,40 @@ def run():
                 execute_builtin(command, arguments)
                 continue
 
-            # Perintah tidak dikenal (akan ditangani di tahap selanjutnya)
-            print(
-                error_text(f"  ✗ Perintah tidak ditemukan: '{command}'")
-                + f"\n  {DIM}Ketik {BOLD}help{RESET}{DIM} untuk melihat daftar perintah yang tersedia.{RESET}"
-            )
+            # ════════════════════ TAHAP 4: FORKING & EXTERNAL COMMANDS ════════════════════
+            # Ambil semua token (command + arguments) menjadi satu list untuk os.execvp
+            # Contoh: user_input = "ls -la" -> tokens = ["ls", "-la"]
+            tokens = [command] + arguments
+
+            try:
+                # 1. Duplikasi proses induk menjadi proses anak
+                pid = os.fork()
+
+                if pid == 0:
+                    # ─── DI DALAM PROSES ANAK (CHILD PROCESS) ───
+                    try:
+                        # Ganti program anak dengan perintah eksternal OS
+                        os.execvp(command, tokens)
+                    except FileNotFoundError:
+                        # Penanganan Tahap 6: Perintah tidak dikenal sistem
+                        print(error_text(f"  ✗ JenShell: command not found: '{command}'"))
+                        sys.exit(1)
+                    except PermissionError:
+                        print(error_text(f"  ✗ JenShell: Permission denied: '{command}'"))
+                        sys.exit(1)
+                    except Exception as e:
+                        print(error_text(f"  ✗ JenShell: Execution error: {e}"))
+                        sys.exit(1)
+                
+                else:
+                    # ─── DI DALAM PROSES INDUK (PARENT PROCESS) ───
+                    # Induk menunggu hingga proses anak selesai (blocking)
+                    _, status = os.waitpid(pid, 0)
+
+            except AttributeError:
+                # Proteksi eror jika dijalankan langsung di Windows native tanpa WSL
+                print(error_text("  ✗ JenShell Error: os.fork() tidak didukung di Windows native. Gunakan WSL/Linux."))
+            # ══════════════════════════════════════════════════════════════════════════════
 
         except KeyboardInterrupt:
             # Ctrl+C → baris baru, lanjutkan
