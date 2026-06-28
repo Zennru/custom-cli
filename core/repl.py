@@ -116,11 +116,9 @@ def run():
                 execute_builtin(command, arguments)
                 continue
 
-            # Perintah tidak dikenal (akan ditangani di tahap selanjutnya)
-            print(
-                error_text(f"  ✗ Perintah tidak ditemukan: '{command}'")
-                + f"\n  {DIM}Ketik {BOLD}help{RESET}{DIM} untuk melihat daftar perintah yang tersedia.{RESET}"
-            )
+            # Perintah eksternal — fork + exec (Tahap 4)
+            # Jalankan sebagai child process, parent menunggu hingga selesai
+            execute_external(command, arguments)
 
         except KeyboardInterrupt:
             # Ctrl+C → baris baru, lanjutkan

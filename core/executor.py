@@ -25,10 +25,10 @@ def execute_external(command, args):
     Jalankan perintah eksternal OS sebagai child process.
 
     Mekanisme:
-        1. Parent process (JenShell) membuat child process via Popen
-        2. Child process menjalankan perintah yang diminta (exec)
-        3. Parent process menunggu child process selesai (wait)
-        4. Jika exit code != 0, tampilkan informasi error
+        - Di Unix/Linux: Menggunakan os.fork() + os.execvp() asli untuk duplikasi
+          dan overlay proses sesuai prinsip teori Sistem Operasi.
+        - Di Windows: Menggunakan subprocess.Popen (fallback) agar program
+          tetap dapat diuji secara lokal di Windows native.
 
     Args:
         command: Nama perintah eksternal (string), misalnya 'dir', 'echo'.
@@ -37,59 +37,86 @@ def execute_external(command, args):
     Returns:
         int: Exit code dari child process, atau -1 jika gagal.
     """
-    # Gabungkan command + arguments menjadi list untuk Popen
-    cmd_list = [command] + args
+    tokens = [command] + args
 
-    try:
-        # ─── Fork: Buat child process ────────────────────────────
-        # subprocess.Popen secara internal melakukan:
-        #   - fork()    → duplikasi proses (membuat child process)
-        #   - execvp()  → overlay child process dengan program baru
-        #
-        # stdin/stdout/stderr di-inherit agar output tampil langsung
-        # di terminal dan program interaktif tetap bisa berjalan.
-        child_process = subprocess.Popen(
-            cmd_list,
-            stdin=None,      # inherit dari parent (terminal)
-            stdout=None,     # inherit dari parent (terminal)
-            stderr=None,     # inherit dari parent (terminal)
-            cwd=os.getcwd(), # gunakan direktori aktif shell
-            shell=True,      # gunakan shell OS untuk resolusi perintah
-        )
+    # ─── 1. Implementasi POSIX (Linux/macOS): Fork & Exec Asli ─────────
+    if hasattr(os, "fork"):
+        try:
+            pid = os.fork()
 
-        # ─── Wait: Parent menunggu child selesai ─────────────────
-        # Parent process (JenShell) menunggu hingga child process
-        # selesai dieksekusi sebelum kembali ke REPL loop.
-        exit_code = child_process.wait()
+            if pid == 0:
+                # ─── CHILD PROCESS ───
+                try:
+                    os.execvp(command, tokens)
+                except FileNotFoundError:
+                    import sys
+                    print(error_text(f"  ✗ JenShell: command not found: '{command}'"))
+                    sys.exit(1)
+                except PermissionError:
+                    import sys
+                    print(error_text(f"  ✗ JenShell: Permission denied: '{command}'"))
+                    sys.exit(1)
+                except Exception as e:
+                    import sys
+                    print(error_text(f"  ✗ JenShell: Execution error: {e}"))
+                    sys.exit(1)
+            else:
+                # ─── PARENT PROCESS ───
+                _, status = os.waitpid(pid, 0)
+                
+                # Ekstrak exit code dari status waitpid
+                if os.WIFEXITED(status):
+                    exit_code = os.WEXITSTATUS(status)
+                    if exit_code != 0:
+                        print(
+                            f"  {DIM}[Proses selesai dengan exit code: "
+                            f"{BOLD}{YELLOW}{exit_code}{RESET}{DIM}]{RESET}"
+                        )
+                    return exit_code
+                return -1
 
-        # Tampilkan info jika child process keluar dengan error
-        if exit_code != 0:
-            print(
-                f"  {DIM}[Proses selesai dengan exit code: "
-                f"{BOLD}{YELLOW}{exit_code}{RESET}{DIM}]{RESET}"
+        except Exception as e:
+            print(error_text(f"  ✗ Fork error: {e}"))
+            return -1
+
+    # ─── 2. Fallback Windows Native: Subprocess ────────────────────────
+    else:
+        try:
+            child_process = subprocess.Popen(
+                tokens,
+                stdin=None,      # inherit dari parent (terminal)
+                stdout=None,     # inherit dari parent (terminal)
+                stderr=None,     # inherit dari parent (terminal)
+                cwd=os.getcwd(), # gunakan direktori aktif shell
+                shell=True,      # gunakan shell OS untuk resolusi perintah
             )
 
-        return exit_code
+            exit_code = child_process.wait()
 
-    except FileNotFoundError:
-        # Perintah tidak ditemukan di PATH sistem
-        print(
-            error_text(f"  ✗ Perintah tidak ditemukan: '{command}'")
-            + f"\n  {DIM}Pastikan perintah tersedia di PATH sistem.{RESET}"
-        )
-        return -1
+            if exit_code != 0:
+                print(
+                    f"  {DIM}[Proses selesai dengan exit code: "
+                    f"{BOLD}{YELLOW}{exit_code}{RESET}{DIM}]{RESET}"
+                )
 
-    except PermissionError:
-        # Tidak punya izin untuk menjalankan perintah
-        print(error_text(f"  ✗ Izin ditolak untuk menjalankan: '{command}'"))
-        return -1
+            return exit_code
 
-    except OSError as e:
-        # Error OS lainnya (misalnya file corrupt, resource limit, dll.)
-        print(error_text(f"  ✗ Error OS saat menjalankan '{command}': {e}"))
-        return -1
+        except FileNotFoundError:
+            print(
+                error_text(f"  ✗ Perintah tidak ditemukan: '{command}'")
+                + f"\n  {DIM}Pastikan perintah tersedia di PATH sistem.{RESET}"
+            )
+            return -1
 
-    except Exception as e:
-        # Error tak terduga
-        print(error_text(f"  ✗ Error tak terduga: {e}"))
-        return -1
+        except PermissionError:
+            print(error_text(f"  ✗ Izin ditolak untuk menjalankan: '{command}'"))
+            return -1
+
+        except OSError as e:
+            print(error_text(f"  ✗ Error OS saat menjalankan '{command}': {e}"))
+            return -1
+
+        except Exception as e:
+            print(error_text(f"  ✗ Error tak terduga: {e}"))
+            return -1
+
