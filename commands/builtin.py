@@ -60,18 +60,28 @@ def execute_builtin(command, args):
 
 
 def _show_help():
-    """Tampilkan daftar perintah built-in yang tersedia."""
+    """Tampilkan daftar perintah built-in dan info perintah eksternal."""
     print()
     print(f"  {BOLD}{BRIGHT_CYAN}╔══════════════════════════════════════════════╗{RESET}")
     print(f"  {BOLD}{BRIGHT_CYAN}║{RESET}  {BOLD}📖 Daftar Perintah JenShell{RESET}               {BOLD}{BRIGHT_CYAN}║{RESET}")
     print(f"  {BOLD}{BRIGHT_CYAN}╠══════════════════════════════════════════════╣{RESET}")
+    print(f"  {BOLD}{BRIGHT_CYAN}║{RESET}  {DIM}Built-in Commands:{RESET}                        {BOLD}{BRIGHT_CYAN}║{RESET}")
+    print(f"  {BOLD}{BRIGHT_CYAN}║{RESET}                                              {BOLD}{BRIGHT_CYAN}║{RESET}")
 
     for cmd_name, (_, description) in BUILTIN_COMMANDS.items():
         cmd_display = f"{BOLD}{BRIGHT_GREEN}{cmd_name:<8}{RESET}"
         desc_display = f"{DIM}{description}{RESET}"
-        print(f"  {BOLD}{BRIGHT_CYAN}║{RESET}  {cmd_display}  {desc_display}")
+        print(f"  {BOLD}{BRIGHT_CYAN}║{RESET}    {cmd_display}  {desc_display}")
 
+    print(f"  {BOLD}{BRIGHT_CYAN}║{RESET}                                              {BOLD}{BRIGHT_CYAN}║{RESET}")
     print(f"  {BOLD}{BRIGHT_CYAN}╠══════════════════════════════════════════════╣{RESET}")
-    print(f"  {BOLD}{BRIGHT_CYAN}║{RESET}  {DIM}Ketik nama perintah untuk menjalankannya{RESET}   {BOLD}{BRIGHT_CYAN}║{RESET}")
+    print(f"  {BOLD}{BRIGHT_CYAN}║{RESET}  {DIM}Perintah Eksternal:{RESET}                       {BOLD}{BRIGHT_CYAN}║{RESET}")
+    print(f"  {BOLD}{BRIGHT_CYAN}║{RESET}                                              {BOLD}{BRIGHT_CYAN}║{RESET}")
+    print(f"  {BOLD}{BRIGHT_CYAN}║{RESET}  {DIM}  Perintah OS juga didukung, misalnya:{RESET}    {BOLD}{BRIGHT_CYAN}║{RESET}")
+    print(f"  {BOLD}{BRIGHT_CYAN}║{RESET}    {BOLD}{YELLOW}dir{RESET}       {DIM}echo{RESET}      {DIM}mkdir{RESET}     {DIM}cls{RESET}      {BOLD}{BRIGHT_CYAN}║{RESET}")
+    print(f"  {BOLD}{BRIGHT_CYAN}║{RESET}    {DIM}type{RESET}      {DIM}python{RESET}    {DIM}ping{RESET}      {DIM}git{RESET}      {BOLD}{BRIGHT_CYAN}║{RESET}")
+    print(f"  {BOLD}{BRIGHT_CYAN}║{RESET}                                              {BOLD}{BRIGHT_CYAN}║{RESET}")
+    print(f"  {BOLD}{BRIGHT_CYAN}║{RESET}    {DIM}(Semua perintah/aplikasi di PATH Anda){RESET}        {BOLD}{BRIGHT_CYAN}║{RESET}")
+    print(f"  {BOLD}{BRIGHT_CYAN}║{RESET}                                              {BOLD}{BRIGHT_CYAN}║{RESET}")
     print(f"  {BOLD}{BRIGHT_CYAN}╚══════════════════════════════════════════════╝{RESET}")
     print()
