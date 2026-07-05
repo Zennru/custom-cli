@@ -157,6 +157,41 @@ def parse_input(user_input):
         }
 
     # ===========================
+    # INPUT REDIRECTION <
+    # ===========================
+    if "<" in tokens:
+
+        if tokens.count("<") > 1:
+            return {
+                "type": "error",
+                "message": "Terlalu banyak operator <."
+            }
+
+        index = tokens.index("<")
+
+        command = tokens[:index]
+        input_file = tokens[index + 1:]
+
+        if not command:
+            return {
+                "type": "error",
+                "message": "Command sebelum < kosong."
+            }
+
+        if len(input_file) != 1:
+            return {
+                "type": "error",
+                "message": "Nama file sumber tidak valid."
+            }
+
+        return {
+            "type": "input_redirect",
+            "command": command[0],
+            "args": command[1:],
+            "file": input_file[0]
+        }
+
+    # ===========================
     # COMMAND BIASA
     # ===========================
 

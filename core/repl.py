@@ -29,7 +29,7 @@ def _setup_encoding():
 from core.prompt import get_prompt
 from core.parser import parse_input
 from core.executor import execute_external
-from core.redirection import execute_redirect
+from core.redirection import execute_redirect, execute_input_redirect
 from core.piping import execute_pipe
 from commands.builtin import is_builtin, execute_builtin
 from utils.colors import (
@@ -168,6 +168,22 @@ def run():
 
                     parsed["left"],
                     parsed["right"]
+
+                )
+
+                continue
+
+            # ===========================
+            # Input Redirection
+            # ===========================
+
+            if parsed["type"] == "input_redirect":
+
+                execute_input_redirect(
+
+                    parsed["command"],
+                    parsed["args"],
+                    parsed["file"]
 
                 )
 
