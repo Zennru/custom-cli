@@ -1,53 +1,171 @@
 """
-parser.py — Parsing dan tokenisasi input pengguna (Tahap 2).
+parser.py — Parsing dan tokenisasi input pengguna.
 
-Memecah string input menjadi command dan arguments menggunakan
-shlex.split() agar mendukung argumen berquote.
+Mendukung:
+- Command biasa
+- I/O Redirection (>, >>)
+- Pipe (|)
+- Validasi syntax sederhana
 """
 
 import shlex
 
 
 def parse_input(user_input):
-    """
-    Parse string input menjadi command dan arguments.
 
-    Menggunakan shlex.split() untuk tokenisasi yang mendukung:
-    - Argumen dengan spasi dalam tanda kutip: cd "My Documents"
-    - Escape characters
-    - Multiple spasi antar argumen diabaikan
-
-    Args:
-        user_input: String mentah dari input pengguna.
-
-    Returns:
-        Tuple (command, arguments):
-            - command (str atau None): Nama perintah, atau None jika input kosong.
-            - arguments (list): Daftar argumen setelah perintah.
-
-    Contoh:
-        parse_input('cd "My Folder"')  →  ('cd', ['My Folder'])
-        parse_input('pwd')             →  ('pwd', [])
-        parse_input('')                →  (None, [])
-    """
-    # Bersihkan whitespace di awal/akhir
     stripped = user_input.strip()
 
-    # Input kosong
     if not stripped:
-        return None, []
+        return None
 
     try:
-        # Tokenisasi menggunakan shlex (mendukung quote)
         tokens = shlex.split(stripped)
     except ValueError:
-        # Jika ada quote yang tidak tertutup, fallback ke split biasa
-        tokens = stripped.split()
+        return {
+            "type": "error",
+            "message": "Syntax Error: kutip tidak ditutup."
+        }
 
     if not tokens:
-        return None, []
+        return None
 
-    command = tokens[0]
-    arguments = tokens[1:]
+    # ===========================
+    # PIPE
+    # ===========================
+    if "|" in tokens:
 
-    return command, arguments
+        if tokens.count("|") > 1:
+            return {
+                "type": "error",
+                "message": "Multiple pipe belum didukung."
+            }
+
+        index = tokens.index("|")
+
+        left = tokens[:index]
+        right = tokens[index + 1:]
+
+        if not left:
+            return {
+                "type":"error",
+                "message":"Command sebelum | tidak boleh kosong."
+            }
+
+        if not right:
+            return {
+                "type":"error",
+                "message":"Command setelah | tidak boleh kosong."
+            }
+
+        return {
+            "type":"pipe",
+
+            "left":{
+                "command":left[0],
+                "args":left[1:]
+            },
+
+            "right":{
+                "command":right[0],
+                "args":right[1:]
+            }
+        }
+
+    # ===========================
+    # REDIRECTION >>
+    # ===========================
+    if ">>" in tokens:
+
+        if tokens.count(">>") > 1:
+            return {
+                "type":"error",
+                "message":"Terlalu banyak operator >>."
+            }
+
+        index = tokens.index(">>")
+
+        command = tokens[:index]
+        output = tokens[index+1:]
+
+        if not command:
+            return {
+                "type":"error",
+                "message":"Command sebelum >> kosong."
+            }
+
+        if len(output)!=1:
+            return {
+                "type":"error",
+                "message":"Nama file tujuan tidak valid."
+            }
+
+        return{
+
+            "type":"redirect",
+
+            "command":command[0],
+
+            "args":command[1:],
+
+            "operator":">>",
+
+            "file":output[0]
+
+        }
+
+    # ===========================
+    # REDIRECTION >
+    # ===========================
+    if ">" in tokens:
+
+        if tokens.count(">")>1:
+            return{
+                "type":"error",
+                "message":"Terlalu banyak operator >."
+            }
+
+        index=tokens.index(">")
+
+        command=tokens[:index]
+
+        output=tokens[index+1:]
+
+        if not command:
+            return{
+                "type":"error",
+                "message":"Command sebelum > kosong."
+            }
+
+        if len(output)!=1:
+            return{
+                "type":"error",
+                "message":"Nama file tujuan tidak valid."
+            }
+
+        return{
+
+            "type":"redirect",
+
+            "command":command[0],
+
+            "args":command[1:],
+
+            "operator":">",
+
+            "file":output[0]
+
+        }
+
+    # ===========================
+    # COMMAND BIASA
+    # ===========================
+
+    return{
+
+        "type":"normal",
+
+        "command":tokens[0],
+
+        "args":tokens[1:]
+
+    }

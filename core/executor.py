@@ -19,6 +19,19 @@ import subprocess
 
 from utils.colors import error_text, warning_text, info_text, DIM, RESET, BOLD, YELLOW
 
+def build_command(command, args):
+    """
+    Membentuk list command yang akan dijalankan.
+
+    Contoh:
+        command = "echo"
+        args = ["Halo"]
+
+    Hasil:
+        ["echo", "Halo"]
+    """
+    return [command] + args
+
 
 def execute_external(command, args):
     """
@@ -37,7 +50,7 @@ def execute_external(command, args):
     Returns:
         int: Exit code dari child process, atau -1 jika gagal.
     """
-    tokens = [command] + args
+    tokens = build_command(command, args)
 
     # ─── 1. Implementasi POSIX (Linux/macOS): Fork & Exec Asli ─────────
     if hasattr(os, "fork"):

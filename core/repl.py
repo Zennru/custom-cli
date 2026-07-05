@@ -29,6 +29,8 @@ def _setup_encoding():
 from core.prompt import get_prompt
 from core.parser import parse_input
 from core.executor import execute_external
+from core.redirection import execute_redirect
+from core.piping import execute_pipe
 from commands.builtin import is_builtin, execute_builtin
 from utils.colors import (
     BOLD, RESET, DIM,
@@ -99,26 +101,77 @@ def run():
             # Tampilkan prompt dan baca input
             user_input = input(get_prompt())
 
-            # Parse input
-            command, arguments = parse_input(user_input)
+            # ===========================
+            # Parse Input
+            # ===========================
 
-            # Input kosong → skip
-            if command is None:
+            parsed = parse_input(user_input)
+
+            if parsed is None:
                 continue
 
-            # Perintah exit → keluar
-            if command == "exit":
-                _exit_shell()
-                break
+            # ===========================
+            # Syntax Error
+            # ===========================
 
-            # Cek apakah built-in command
-            if is_builtin(command):
-                execute_builtin(command, arguments)
+            if parsed["type"] == "error":
+
+                print(error_text(parsed["message"]))
+
                 continue
 
-            # Perintah eksternal — fork + exec (Tahap 4)
-            # Jalankan sebagai child process, parent menunggu hingga selesai
-            execute_external(command, arguments)
+            # ===========================
+            # Command Biasa
+            # ===========================
+
+            if parsed["type"] == "normal":
+
+                command = parsed["command"]
+                arguments = parsed["args"]
+
+                if command == "exit":
+                    _exit_shell()
+                    break
+
+                if is_builtin(command):
+                    execute_builtin(command, arguments)
+                    continue
+
+                execute_external(command, arguments)
+
+                continue
+
+            # ===========================
+            # Redirection
+            # ===========================
+
+            if parsed["type"] == "redirect":
+
+                execute_redirect(
+
+                    parsed["command"],
+                    parsed["args"],
+                    parsed["operator"],
+                    parsed["file"]
+
+                )
+
+                continue
+
+            # ===========================
+            # Pipe
+            # ===========================
+
+            if parsed["type"] == "pipe":
+
+                execute_pipe(
+
+                    parsed["left"],
+                    parsed["right"]
+
+                )
+
+                continue
 
         except KeyboardInterrupt:
             # Ctrl+C → baris baru, lanjutkan
